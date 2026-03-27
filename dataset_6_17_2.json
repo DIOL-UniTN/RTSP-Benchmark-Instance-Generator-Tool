@@ -1,0 +1,14 @@
+{
+    "dataset_title": "new_dataset_6",
+    "instances_number": 15,
+    "seed": 198743,
+    "machines_number": 10,
+    "time_windows_number": 2,
+    "capacities": [240, 240, 240, 240, 240, 240, 240, 240, 240, 240, 240, 240, 240, 240, 240, 240, 240, 240, 240, 240],
+    "initial_occupation_percentage": [0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7],
+    "occupation_decay_velocity": [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
+    "arrival_mean": 17,
+    "priorities_percentage": [0.75, 0.2, 0.05],
+    "min_beam_matched_sets": 2,
+    "min_partial_beam_matched_sets": 3
+}

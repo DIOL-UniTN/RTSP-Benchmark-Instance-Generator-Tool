@@ -8,7 +8,13 @@ class Input:
                 data = pk.load(input_file)
 
         self.machineEligibility = data['machineEligibility']
+        '''
+        machineEligibility: matrix patients_qty x machines_qty
+        '''
         self.machineBeamMatching = data['machineBeamMatching']
+        '''
+        machineBeamMatching: matrix machines_qty x machines_qty
+        '''
         self.patientInfo = data['patientInfo']
         '''
         patientInfo: {
@@ -28,6 +34,9 @@ class Input:
         self.machinesQty = data['machinesQty']
         self.machinesMaxCapacity = data['machinesMaxCapacity']
         self.patientsGroupedByProtocol = data['patientsGroupedByProtocol']
+        '''
+        patientsGroupedByProtocol: array long protocolQty fo lists containing patients with that protocol, ordered by target date.
+        '''
         self.daysQty = data['daysQty']
         if patientsIdList != None:
             self.patientsIdList = patientsIdList

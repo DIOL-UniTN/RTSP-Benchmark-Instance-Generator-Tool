@@ -10,41 +10,6 @@ from SimulatedAnnealing.Input import Input
 from Heuristic_new_dataStructure import heuristicFirstFit, getSolutionToStore
 
 
-weightsAlpha = {
-    1: {
-        'alpha_1': 50,
-        'alpha_2': 100,
-        'alpha_3': 1,
-        'alpha_4': 0,
-        'alpha_5': 10,
-        'alpha_6': 10
-    },
-    2: {
-        'alpha_1': 50,
-        'alpha_2': 100,
-        'alpha_3': 1,
-        'alpha_4': 1,
-        'alpha_5': 0,
-        'alpha_6': 0
-    },
-    3: {
-        'alpha_1': 100,
-        'alpha_2': 0,
-        'alpha_3': 1,
-        'alpha_4': 0,
-        'alpha_5': 10,
-        'alpha_6': 0
-    },
-    4: {
-        'alpha_1': 100,
-        'alpha_2': 0,
-        'alpha_3': 1,
-        'alpha_4': 5,
-        'alpha_5': 10,
-        'alpha_6': 10
-    }
-}
-
 parser = argparse.ArgumentParser(description='Solve different instances of RTSP')
 
 
@@ -224,7 +189,7 @@ for instance in range(args.instances_number):
     inputData = Input('', data = data)
 
     for obj in range(1,2):
-        objWeights = [w for w in weightsAlpha[obj].values()]
+        objWeights = [w for w in parameters['weightsAlpha'][obj].values()]
         sa, _, timeElapsed = heuristicFirstFit(inputData, objWeights)
         f_obj = [row.sum() for row in sa.fitness.objectiveMatrix.transpose()]
 

@@ -59,8 +59,8 @@
         "alpha_max": 0.8952
     },
     "patients": {
-        "lambda_min": 0.7923076923076923,
-        "lambda_max": 3.2911392405063293,
+        "lambda_min": 3.64,
+        "lambda_max": 10.72,
         "percentage_priority_1_min": [
             0.08490566037735849
         ],
@@ -3653,6 +3653,40 @@
                     83
                 ]
             }
+        }
+    },
+    "weightsAlpha": {
+        "1": {
+            "alpha_1": 50,
+            "alpha_2": 100,
+            "alpha_3": 1,
+            "alpha_4": 0,
+            "alpha_5": 10,
+            "alpha_6": 10
+        },
+        "2": {
+            "alpha_1": 50,
+            "alpha_2": 100,
+            "alpha_3": 1,
+            "alpha_4": 1,
+            "alpha_5": 0,
+            "alpha_6": 0
+        },
+        "3": {
+            "alpha_1": 100,
+            "alpha_2": 0,
+            "alpha_3": 1,
+            "alpha_4": 0,
+            "alpha_5": 10,
+            "alpha_6": 0
+        },
+        "4": {
+            "alpha_1": 100,
+            "alpha_2": 0,
+            "alpha_3": 1,
+            "alpha_4": 5,
+            "alpha_5": 10,
+            "alpha_6": 10
         }
     }
 }
