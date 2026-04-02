@@ -1,6 +1,6 @@
 import numpy as np
 import copy
-from SimulatedAnnealing.Input import Input
+from data_structure.Input import Input
 import pickle as pk
 
 class Solution:

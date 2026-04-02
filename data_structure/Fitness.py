@@ -1,5 +1,5 @@
-from SimulatedAnnealing.Input import Input
-from SimulatedAnnealing.Solution import Solution
+from data_structure.Input import Input
+from data_structure.Solution import Solution
 from typing import List
 import numpy as np
 
