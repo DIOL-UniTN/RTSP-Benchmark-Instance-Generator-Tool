@@ -83,7 +83,8 @@ for protocol in parameters['patients']['protocols_info']:
 # TODO check min_partial_beam_matched_sets < numMachines/2
 # TODO check min_partial_beam_matched_sets >= min_beam_matched_sets
 #completeSets = np.random.randint(0, round(args.machines_number * 0.2)) if round(args.machines_number * 0.2) > 0 else 0
-partialSets = np.random.randint(args.min_partial_beam_matched_sets, round(args.machines_number * 0.3)) if round(args.machines_number * 0.3) > args.min_partial_beam_matched_sets else args.min_partial_beam_matched_sets
+#partialSets = np.random.randint(args.min_partial_beam_matched_sets, round(args.machines_number * 0.3)) if round(args.machines_number * 0.3) > args.min_partial_beam_matched_sets else args.min_partial_beam_matched_sets
+partialSets = args.min_partial_beam_matched_sets
 machineBeamMatching = np.zeros((args.machines_number, args.machines_number))
 for ind in range(args.machines_number):
     machineBeamMatching[ind][ind] = 2
@@ -98,7 +99,7 @@ for _ in range(partialSets):
         m_remaining = np.delete(m_remaining, np.where(m_remaining == m))
         for m2 in m_temp[ind_m+1:]:
             if m != m2:
-                if completeSets < args.min_beam_matched_sets or 0.8 < np.random.rand():
+                if completeSets < args.min_beam_matched_sets:
                     complete = True
                     machineBeamMatching[m][m2] = 2
                     machineBeamMatching[m2][m] = 2
@@ -121,7 +122,7 @@ for instance in range(args.instances_number):
         'timeWindowsQty': args.time_windows_number,
         'patientsQty': None,
         'machinesQty': args.machines_number,
-        'machinesMaxCapacity': args.capacities[ind],
+        'machinesMaxCapacity': args.capacities,
         'patientsGroupedByProtocol': None,
         'daysQty': time_horizon
     }
@@ -135,7 +136,7 @@ for instance in range(args.instances_number):
         for tw in range(args.time_windows_number):
             ind = m * args.time_windows_number + tw
             beta_0 = np.log(args.initial_occupation_percentage[ind] * args.capacities[ind])
-            beta_1 = (1 - args.occupation_decay_velocity[ind]) * parameters['machines']['beta_1_min'] + args.occupation_decay_velocity[ind] * parameters['machines']['beta_1_max']
+            beta_1 = args.occupation_decay_velocity[ind] * parameters['machines']['beta_1_min'] + (1 - args.occupation_decay_velocity[ind]) * parameters['machines']['beta_1_max']
             beta_2 = parameters['machines']['beta_2_mean']
             for d in range(time_horizon):
                 mu_d = np.exp(beta_0 + beta_1 * d + beta_2 * (d**2))
