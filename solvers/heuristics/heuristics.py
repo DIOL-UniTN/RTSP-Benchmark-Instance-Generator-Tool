@@ -1,8 +1,8 @@
 import copy
 import time
-from ...data_structure.Input import Input
-from ...data_structure.Fitness import Fitness
-from ...data_structure.Solution import Solution
+from data_structure.Input import Input
+from data_structure.Fitness import Fitness
+from data_structure.Solution import Solution
 
 def algorithmFirstFit(inputData, patientsBatch, windowSet, beamMatchedMachines, assignment, startDays):
     for patientsDaily in patientsBatch:

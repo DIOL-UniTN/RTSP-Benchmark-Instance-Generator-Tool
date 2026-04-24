@@ -1,8 +1,8 @@
 import argparse
 import cplex
-from ...data_structure.Input import Input
-from ...data_structure.Solution import Solution
-from ...data_structure.Fitness import Fitness
+from data_structure.Input import Input
+from data_structure.Solution import Solution
+from data_structure.Fitness import Fitness
 import time
 
 def solveBatch(patientsDaily, alphas, inputData, windowsSet, allBeamMatchedMachines, completelyBeamMatchedMachines, costFunctions, sol_to_store, time_limit, seed):

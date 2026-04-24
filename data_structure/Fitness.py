@@ -4,9 +4,10 @@ from typing import List
 import numpy as np
 
 class Fitness:
-    def __init__(self, solution: Solution, input: Input, weights: List[int]):
+    def __init__(self, solution: Solution, input: Input, weights: List[int], capacity_penalty_weight: float = 100):
         self.objectiveMatrix = self.buildObjectiveMatrix(solution, input)
         self.weights = np.matrix(weights)
+        self.capacity_penalty_weight = capacity_penalty_weight
         self.objective = 0
         self.penalty = 0
         self.updatePenalty(solution, input)
@@ -94,7 +95,7 @@ class Fitness:
         self.objective = 1 + (self.objectiveMatrix*self.weights.transpose()).sum() + self.penalty
 
     def updatePenalty(self, solution: Solution, input: Input):
-        penaltyCapacity = 100
+        penaltyCapacity = self.capacity_penalty_weight
         penaltyProtocol = 100
         self.objective -= self.penalty
         

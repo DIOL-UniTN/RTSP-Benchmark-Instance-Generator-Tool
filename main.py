@@ -51,6 +51,8 @@ def cmd_solve(args):
         _solve_heuristic(args)
     elif solver in ('sa', 'simulated_annealing'):
         _solve_sa(args)
+    elif solver in ('sa_v2', 'simulated_annealing_v2'):
+        _solve_sa_v2(args)
     elif solver in ('milp', 'cplex', 'cplex_milp'):
         _solve_milp(args)
     else:
@@ -75,37 +77,122 @@ def _solve_heuristic(args):
     print(f"Heuristic (FirstFit) completed in {elapsed:.2f}s")
     if sa.solution.checkIfLegal(inputData):
         print("Solution is FEASIBLE.")
+        print('objective is: ', sa.fitness.objective)
         _save_solution(sa, args)
     else:
         print("Solution is NOT feasible.")
 
 
 def _solve_sa(args):
+    import copy
     import json
     from data_structure.Input import Input
+    from solvers.heuristics.heuristics import heuristicFirstFit
     from solvers.simulated_annealing.SimulatedAnnealing import SimulatedAnnealing
 
     with open('generator_parameter.json') as f:
         parameters = json.load(f)
 
     obj = args.obj if hasattr(args, 'obj') and args.obj is not None else 1
-    objWeights = [w for w in parameters['weightsAlpha'][obj].values()]
+    objWeights = [w for w in parameters['weightsAlpha'][f'{obj}'].values()]
 
-    neighbour_sizes = (
-        [int(x) for x in args.neighbour_sizes.split(',')]
-        if hasattr(args, 'neighbour_sizes') and args.neighbour_sizes
-        else [5, 5, 5, 5]
-    )
+    inputData = Input(args.instance)
+    neighbour_sizes = _parse_neighbour_sizes(args)
+    neighbour_prob = _parse_neighbour_prob(args)
 
-    sa = SimulatedAnnealing(
-        args.instance,
-        args.solution if args.solution else None,
-        objWeights,
-        neighbour_sizes,
+    if args.solution:
+        sa = SimulatedAnnealing(
+            args.instance,
+            args.solution,
+            objWeights,
+            neighbour_sizes,
+            capacityPenaltyWeight=args.capacity_penalty_weight,
+        )
+    else:
+        initial_solution, _, _ = heuristicFirstFit(copy.deepcopy(inputData))
+        sa = SimulatedAnnealing(
+            args.instance,
+            None,
+            objWeights,
+            neighbour_sizes,
+            inputData=inputData,
+            data={
+                'patientAppointments': initial_solution.patientAppointments,
+                'startDays': initial_solution.startDays,
+            },
+            capacityPenaltyWeight=args.capacity_penalty_weight,
+        )
+
+    sa.run(
+        start_temperature=args.start_temperature,
+        k_max=args.k_max,
+        cooling_rate=args.cooling_rate,
+        neighbour_prob=neighbour_prob,
+        seed=args.seed,
+        max_iter=args.max_iter,
     )
-    sa.run()
 
     print("Simulated Annealing completed.")
+    if sa.solution.checkIfLegal(sa.input):
+        print("Solution is FEASIBLE.")
+        print('objective is: ', sa.fitness.objective)
+        _save_solution(sa, args)
+    else:
+        print("Solution is NOT feasible.")
+
+
+def _solve_sa_v2(args):
+    import copy
+    import json
+    from data_structure.Input import Input
+    from solvers.heuristics.heuristics import heuristicFirstFit
+    from solvers.simulated_annealing.SimulatedAnnealingV2 import SimulatedAnnealingV2
+
+    with open('generator_parameter.json') as f:
+        parameters = json.load(f)
+
+    obj = args.obj if hasattr(args, 'obj') and args.obj is not None else 1
+    objWeights = [w for w in parameters['weightsAlpha'][f'{obj}'].values()]
+
+    inputData = Input(args.instance)
+    neighbour_sizes = _parse_neighbour_sizes(args)
+    neighbour_prob = _parse_neighbour_prob(args)
+
+    if args.solution:
+        sa = SimulatedAnnealingV2(
+            args.instance,
+            args.solution,
+            objWeights,
+            neighbour_sizes,
+            capacityPenaltyWeight=args.capacity_penalty_weight,
+        )
+    else:
+        initial_solution, _, _ = heuristicFirstFit(copy.deepcopy(inputData))
+        sa = SimulatedAnnealingV2(
+            args.instance,
+            None,
+            objWeights,
+            neighbour_sizes,
+            inputData=inputData,
+            data={
+                'patientAppointments': initial_solution.patientAppointments,
+                'startDays': initial_solution.startDays,
+            },
+            capacityPenaltyWeight=args.capacity_penalty_weight,
+        )
+
+    sa.run(
+        start_temperature=args.start_temperature,
+        final_temperature=args.final_temperature,
+        cooling_rate=args.cooling_rate,
+        neighbour_prob=neighbour_prob,
+        seed=args.seed,
+        total_iterations=args.iterations_total,
+        sigma=args.sigma,
+        max_iter=args.max_iter,
+    )
+
+    print("Simulated Annealing V2 completed.")
     if sa.solution.checkIfLegal(sa.input):
         print("Solution is FEASIBLE.")
         _save_solution(sa, args)
@@ -151,6 +238,34 @@ def _save_solution(sa, args):
     print(f"Solution saved to: {out_path}")
 
 
+def _parse_neighbour_sizes(args):
+    if hasattr(args, 'neighbour_sizes') and args.neighbour_sizes:
+        values = [int(x) for x in args.neighbour_sizes.split(',')]
+    else:
+        values = [5, 5, 5, 5]
+
+    if len(values) != 4:
+        raise ValueError("Expected four neighbour sizes: twDays,twShift,machineDays,machineShift.")
+
+    return values
+
+
+def _parse_neighbour_prob(args):
+    if hasattr(args, 'neighbour_prob') and args.neighbour_prob:
+        values = [float(x) for x in args.neighbour_prob.split(',')]
+    else:
+        values = [0.2, 0.2, 0.2, 0.2, 0.2]
+
+    if len(values) != 5:
+        raise ValueError("Expected five neighbourhood probabilities.")
+
+    total = sum(values)
+    if total <= 0:
+        raise ValueError("Neighbourhood probabilities must sum to a positive value.")
+
+    return [value / total for value in values]
+
+
 # ---------------------------------------------------------------------------
 # Sub-command: list-datasets
 # ---------------------------------------------------------------------------
@@ -182,6 +297,7 @@ def cmd_list_solvers(_args):
     solvers = [
         ('heuristic', 'Greedy FirstFit heuristic (fast, good initial solution)'),
         ('sa',        'Simulated Annealing metaheuristic (slower, better quality)'),
+        ('sa_v2',     'Simulated Annealing with derived N_s/N_a and cooling until the final temperature'),
         ('milp',      'CPLEX MILP exact solver (requires IBM CPLEX license)'),
     ]
     print("Available solvers (use with `python main.py solve --solver <name>`):\n")
@@ -234,6 +350,26 @@ def build_parser():
                        help='Objective weights index in generator_parameter.json (default: 1).')
     p_sol.add_argument('--neighbour-sizes', default='5,5,5,5', metavar='N,N,N,N',
                        help='(SA only) Comma-separated neighbour sizes (default: 5,5,5,5).')
+    p_sol.add_argument('--neighbour-prob', default='0.2,0.2,0.2,0.2,0.2', metavar='P,P,P,P,P',
+                       help='(SA only) Comma-separated neighbourhood probabilities (default: uniform).')
+    p_sol.add_argument('--start-temperature', type=float, default=100.0, metavar='T',
+                       help='(SA only) Initial temperature (default: 100.0).')
+    p_sol.add_argument('--final-temperature', type=float, default=1.0, metavar='T',
+                       help='(SA V2 only) Final temperature threshold T_f (default: 1.0).')
+    p_sol.add_argument('--cooling-rate', type=float, default=0.99, metavar='A',
+                       help='(SA only) Multiplicative cooling rate alpha (default: 0.99).')
+    p_sol.add_argument('--k-max', type=int, default=1000, metavar='N',
+                       help='(SA only) Total number of neighbourhood moves (default: 1000).')
+    p_sol.add_argument('--seed', type=int, default=42, metavar='N',
+                       help='(SA only) Random seed (default: 42).')
+    p_sol.add_argument('--max-iter', type=int, default=50, metavar='N',
+                       help='(SA only) Max retries when building a neighbourhood move (default: 50).')
+    p_sol.add_argument('--capacity-penalty-weight', type=float, default=100.0, metavar='W',
+                       help='(SA only) Weight used for capacity violations in the fitness penalty (default: 100).')
+    p_sol.add_argument('--iterations-total', type=int, default=1000, metavar='I',
+                       help='(SA V2 only) Total iteration budget I used to derive N_s (default: 1000).')
+    p_sol.add_argument('--sigma', type=float, default=0.2, metavar='S',
+                       help='(SA V2 only) Multiplier used to derive N_a = sigma * N_s (default: 0.2).')
     p_sol.set_defaults(func=cmd_solve)
 
     # list-datasets

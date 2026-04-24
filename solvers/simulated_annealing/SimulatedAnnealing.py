@@ -1,14 +1,26 @@
-from SimulatedAnnealing.Input import Input
-from SimulatedAnnealing.Solution import Solution
-from SimulatedAnnealing.Fitness import Fitness
+from data_structure.Input import Input
+from data_structure.Solution import Solution
+from data_structure.Fitness import Fitness
 import numpy as np
 import copy
 from math import exp
 
 MAX_ITER = 50
+DEFAULT_NEIGHBOUR_PROB = [0.2 for _ in range(5)]
+NEIGHBOUR_SIZE_KEYS = ['twDays', 'twShift', 'machineDays', 'machineShift']
 
 class SimulatedAnnealing():
-    def __init__(self, inputFile: str, solutionFile: str, weights, neighbourSizes, inputData=None, data=None, calculateCapacity=True):
+    def __init__(
+        self,
+        inputFile: str,
+        solutionFile: str,
+        weights,
+        neighbourSizes,
+        inputData=None,
+        data=None,
+        calculateCapacity=True,
+        capacityPenaltyWeight=100,
+    ):
         if inputData == None:
             self.input = Input(inputFile)
         else:
@@ -20,8 +32,31 @@ class SimulatedAnnealing():
         # for info in self.input.patientInfo:
         #     info['allowedDays'] = info['allowedDays'][:self.solution.maxDays]
     
-        self.fitness = Fitness(self.solution, self.input, weights)
-        self.neighbourSizes = neighbourSizes #twDays, twShift, machineDays, machineShift
+        self.fitness = Fitness(
+            self.solution,
+            self.input,
+            weights,
+            capacity_penalty_weight=capacityPenaltyWeight,
+        )
+        self.neighbourSizes = self._normalize_neighbour_sizes(neighbourSizes)
+        self.capacityPenaltyWeight = capacityPenaltyWeight
+        self._reset_move_tracking()
+
+    def _normalize_neighbour_sizes(self, neighbourSizes):
+        if isinstance(neighbourSizes, dict):
+            return neighbourSizes
+
+        if len(neighbourSizes) != len(NEIGHBOUR_SIZE_KEYS):
+            raise ValueError(
+                f"Expected {len(NEIGHBOUR_SIZE_KEYS)} neighbour sizes, got {len(neighbourSizes)}."
+            )
+
+        return {
+            key: int(value)
+            for key, value in zip(NEIGHBOUR_SIZE_KEYS, neighbourSizes)
+        }
+
+    def _reset_move_tracking(self):
         self.all_residual_cap_moves = []
         self.all_patient_appoint_moves = []
         self.all_start_day_moves = []
@@ -30,6 +65,26 @@ class SimulatedAnnealing():
         self.improvingMovesCounter = [0 for _ in range(5)]
         self.acceptedMovesGain = [0 for _ in range(5)]
         self.movesCount = [0 for _ in range(5)]
+
+    def _handle_candidate(self, perturbation_index, former_obj, temperature):
+        self.movesCount[perturbation_index] += 1
+
+        accepted = self.acceptNew(former_obj, self.fitness.objective, temperature)
+        improved = accepted and self.fitness.objective < former_obj
+
+        if accepted:
+            self.acceptedMovesCounter[perturbation_index] += 1
+            if improved:
+                self.improvingMovesCounter[perturbation_index] += 1
+                self.acceptedMovesGain[perturbation_index] += former_obj - self.fitness.objective
+
+        return accepted, improved
+
+    def _store_accepted_moves(self, residual_cap_moves, patient_appoint_moves, start_day_moves, old_obj_values):
+        self.all_residual_cap_moves += residual_cap_moves
+        self.all_patient_appoint_moves += patient_appoint_moves
+        self.all_start_day_moves += start_day_moves
+        self.all_old_obj_values += old_obj_values
 
     def shiftTimeWindow(self):
         #TODO for now it's only forward
@@ -556,29 +611,24 @@ class SimulatedAnnealing():
         MAX_ITER = max_iter
 
         np.random.seed(seed)
+        self._reset_move_tracking()
         T = startT
         historyAccepted = []
         historyBest = []
         # TODO look for "profiler" and if copy.deepcopy takes more time than undoing the perturbation
         bestSolution = copy.deepcopy(self.solution)
         bestFitness = copy.deepcopy(self.fitness)
+        print('starting fitness:', self.fitness.objective)
         for _ in range(kMax):
             former_obj = self.fitness.objective # TODO check se objective viene passato per valore o per riferimento
             perturbation_index, residual_cap_moves, patient_appoint_moves, start_day_moves, old_obj_values = self.neighbour(neighbourProb)
-            
-            self.movesCount[perturbation_index] += 1
-            
-            if not self.acceptNew(former_obj, self.fitness.objective, T):
+
+            accepted, _ = self._handle_candidate(perturbation_index, former_obj, T)
+
+            if not accepted:
                 self.undoMoves(residual_cap_moves, patient_appoint_moves, start_day_moves, old_obj_values)
             else:
-                self.all_residual_cap_moves += residual_cap_moves
-                self.all_patient_appoint_moves += patient_appoint_moves
-                self.all_start_day_moves += start_day_moves
-                self.all_old_obj_values += old_obj_values
-                self.acceptedMovesCounter[perturbation_index] += 1
-                if  self.fitness.objective < former_obj:
-                    self.improvingMovesCounter[perturbation_index] += 1
-                    self.acceptedMovesGain[perturbation_index] += former_obj - self.fitness.objective
+                self._store_accepted_moves(residual_cap_moves, patient_appoint_moves, start_day_moves, old_obj_values)
 
             T, alpha = self.updateTemperature(T, alpha)
 
@@ -598,6 +648,7 @@ class SimulatedAnnealing():
         MAX_ITER = max_iter
 
         np.random.seed(seed)
+        self._reset_move_tracking()
         historyAccepted = []
         historyBest = []
         # TODO look for "profiler" and if copy.deepcopy takes more time than undoing the perturbation
@@ -609,20 +660,13 @@ class SimulatedAnnealing():
             for _ in range(int(kMax/reheating_iter)):
                 former_obj = self.fitness.objective # TODO check se objective viene passato per valore o per riferimento
                 perturbation_index, residual_cap_moves, patient_appoint_moves, start_day_moves, old_obj_values = self.neighbour(neighbourProb)
-                
-                self.movesCount[perturbation_index] += 1
-                
-                if not self.acceptNew(former_obj, self.fitness.objective, T):
+
+                accepted, _ = self._handle_candidate(perturbation_index, former_obj, T)
+
+                if not accepted:
                     self.undoMoves(residual_cap_moves, patient_appoint_moves, start_day_moves, old_obj_values)
                 else:
-                    self.all_residual_cap_moves += residual_cap_moves
-                    self.all_patient_appoint_moves += patient_appoint_moves
-                    self.all_start_day_moves += start_day_moves
-                    self.all_old_obj_values += old_obj_values
-                    self.acceptedMovesCounter[perturbation_index] += 1
-                    if  self.fitness.objective < former_obj:
-                        self.improvingMovesCounter[perturbation_index] += 1
-                        self.acceptedMovesGain[perturbation_index] += former_obj - self.fitness.objective
+                    self._store_accepted_moves(residual_cap_moves, patient_appoint_moves, start_day_moves, old_obj_values)
 
                 T, alpha = self.updateTemperature(T, alpha)
 
@@ -646,4 +690,28 @@ class SimulatedAnnealing():
         plt.ylabel('objective')
         plt.xlabel('iterations')
         plt.show()
+        return bestSolution, bestFitness, historyAccepted, historyBest
+
+    def run(
+        self,
+        start_temperature=100.0,
+        k_max=1000,
+        cooling_rate=0.99,
+        neighbour_prob=None,
+        seed=42,
+        max_iter=50,
+    ):
+        if neighbour_prob is None:
+            neighbour_prob = DEFAULT_NEIGHBOUR_PROB
+
+        bestSolution, bestFitness, historyAccepted, historyBest = self.main(
+            start_temperature,
+            k_max,
+            cooling_rate,
+            neighbour_prob,
+            seed,
+            max_iter=max_iter,
+        )
+        self.solution = bestSolution
+        self.fitness = bestFitness
         return bestSolution, bestFitness, historyAccepted, historyBest

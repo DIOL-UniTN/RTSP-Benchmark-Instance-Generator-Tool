@@ -1,5 +1,5 @@
-from .data_structure.Solution import Solution
-from .data_structure.Input import Input
+from data_structure.Solution import Solution
+from data_structure.Input import Input
 
 
 def main(inputFile, solutionFile):
