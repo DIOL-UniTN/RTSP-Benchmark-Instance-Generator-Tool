@@ -267,27 +267,24 @@ for config_path in config_files:
         inputData = Input('', data=data)
 
         for obj in range(1, 2):
-            objWeights = [w for w in parameters['weightsAlpha'][obj].values()]
-            sa, _, timeElapsed = heuristicFirstFit(inputData, objWeights)
+            objWeights = [w for w in parameters['weightsAlpha'][str(obj)].values()]
+            solution, _, timeElapsed = heuristicFirstFit(inputData)
 
             sol_to_store = {
-                'patientAppointments': sa.solution.patientAppointments,
-                'startDays': sa.solution.startDays,
-                'acceptedMovesCounter': sa.acceptedMovesCounter,
-                'improvingMovesCounter': sa.improvingMovesCounter,
-                'acceptedMovesGain': sa.acceptedMovesGain,
+                'patientAppointments': solution.patientAppointments,
+                'startDays': solution.startDays,
             }
 
             maxDays = (
                 max(
                     data['patientInfo'][ind_p]['numFractions'] + start
-                    for ind_p, start in enumerate(sa.solution.startDays)
+                    for ind_p, start in enumerate(solution.startDays)
                 )
                 + 10
             )
             data['daysQty'] = maxDays
 
-            if sa.solution.checkIfLegal(sa.input):
+            if solution.checkIfLegal(inputData):
                 directorySol = f'solutions/FirstFit/monthly/{dataset_title}/{arrival_mean}_{time_windows_number}'
                 os.makedirs(directorySol, exist_ok=True)
                 with open(f'{directorySol}/{instance}.pk', 'wb') as handle:
